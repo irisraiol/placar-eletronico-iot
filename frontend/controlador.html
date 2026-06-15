@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel do Mesário — Placar IoT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/assets/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏆 Painel do Mesário</h1>
+    <nav>
+      <a href="/">Partidas</a>
+      <a href="/admin">Gerenciar</a>
+    </nav>
+  </header>
+  <main>
+    <div id="erro"></div>
+    <div id="view"></div>
+  </main>
+  <script type="module">
+    import { api, formatarTempo } from "/static/assets/api.js";
+    const id   = location.pathname.split("/").pop();
+    const view = document.getElementById("view");
+    const erro = document.getElementById("erro");
+    // valores padrão de pontuação por modalidade.
+    const PONTOS = {
+      futebol:  [1],
+      basquete: [1, 2, 3],
+      volei:    [1],
+      handebol: [1],
+    };
+    async function enviar(evento) {
+      erro.innerHTML = "";
+      try { render(await api.enviarEvento(id, evento)); }
+      catch (e) { erro.innerHTML = `<div class="alert">${e.message}</div>`; }
+    }
+    function botoesPonto(time, modalidade) {
+      return PONTOS[modalidade].map(v =>
+        `<button data-evt='${JSON.stringify({tipo:"ponto",time,valor:v})}'>+${v} ponto</button>`
+      ).join("");
+    }
+    function render(p) {
+      const podeIniciar  = p.status === "agendada";
+      const podePausar   = p.status === "em_andamento";
+      const podeRetomar  = p.status === "pausada";
+      const podeFinalizar= p.status !== "finalizada";
+      view.innerHTML = `
+        <p style="color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">
+          ${p.modalidade} · ${p.status.replace("_"," ")}
+        </p>
+        <div class="scoreboard">
+          <div class="team" style="background:${p.casa.time.cor}">
+            <div class="nome">${p.casa.time.nome}</div>
+            <div class="pts">${p.casa.pontos}</div>
+            <div class="faltas">Faltas: ${p.casa.faltas}</div>
+          </div>
+          <div class="middle">
+            <div class="crono">${formatarTempo(p.cronometro_atual)}</div>
+            <div class="periodo">Período ${p.periodo}</div>
+          </div>
+          <div class="team" style="background:${p.visitante.time.cor}">
+            <div class="nome">${p.visitante.time.nome}</div>
+            <div class="pts">${p.visitante.pontos}</div>
+            <div class="faltas">Faltas: ${p.visitante.faltas}</div>
+          </div>
+        </div>
+        <div class="actions">
+          <div class="group">
+            <h3>${p.casa.time.nome}</h3>
+            <div class="btn-row">
+              ${botoesPonto("casa", p.modalidade)}
+              <button class="secondary" data-evt='${JSON.stringify({tipo:"falta",time:"casa"})}'>+ falta</button>
+            </div>
+          </div>
+          <div class="group">
+            <h3>${p.visitante.time.nome}</h3>
+            <div class="btn-row">
+              ${botoesPonto("visitante", p.modalidade)}
+              <button class="secondary" data-evt='${JSON.stringify({tipo:"falta",time:"visitante"})}'>+ falta</button>
+            </div>
+          </div>
+        </div>
+        <div class="group" style="margin-top:18px">
+          <h3>Controle da partida</h3>
+          <div class="btn-row">
+            <button ${podeIniciar?"":"disabled"}  data-evt='{"tipo":"iniciar"}'>▶ Iniciar</button>
+            <button ${podePausar?"":"disabled"}   data-evt='{"tipo":"pausar"}'  class="secondary">⏸ Pausar</button>
+            <button ${podeRetomar?"":"disabled"}  data-evt='{"tipo":"retomar"}' class="secondary">⏵ Retomar</button>
+            <button data-evt='{"tipo":"fim_periodo"}' class="secondary">⏭ Fim de período</button>
+            <button ${podeFinalizar?"":"disabled"} data-evt='{"tipo":"finalizar"}' class="danger">⏹ Finalizar</button>
+            <button data-evt='{"tipo":"resetar"}' class="secondary">↺ Resetar</button>
+          </div>
+        </div>
+      `;
+      view.querySelectorAll("button[data-evt]").forEach(btn => {
+        btn.addEventListener("click", () => enviar(JSON.parse(btn.dataset.evt)));
+      });
+    }
+    async function tick() {
+      try { render(await api.obterPartida(id)); }
+      catch (e) { erro.innerHTML = `<div class="alert">${e.message}</div>`; }
+    }
+    tick();
+    // Atualiza cronômetro/estado a cada segundo.
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>

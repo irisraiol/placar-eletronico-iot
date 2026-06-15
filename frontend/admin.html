@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gerenciar Partidas — Placar IoT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/assets/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏆 Placar Eletrônico IoT</h1>
+    <nav>
+      <a href="/">Partidas</a>
+      <a href="/admin">Gerenciar</a>
+    </nav>
+  </header>
+  <main>
+    <h2>Criar nova partida</h2>
+    <div id="erro"></div>
+    <form id="form" class="form">
+      <div>
+        <label>Modalidade</label>
+        <select name="modalidade" required>
+          <option value="futebol">Futebol</option>
+          <option value="basquete">Basquete</option>
+          <option value="volei">Vôlei</option>
+          <option value="handebol">Handebol</option>
+        </select>
+      </div>
+      <div class="row">
+        <div>
+          <label>Time da casa</label>
+          <input name="casa_nome" placeholder="Ex.: Leões" required />
+        </div>
+        <div>
+          <label>Cor do time da casa</label>
+          <input name="casa_cor" type="color" value="#1e88e5" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Time visitante</label>
+          <input name="vis_nome" placeholder="Ex.: Águias" required />
+        </div>
+        <div>
+          <label>Cor do time visitante</label>
+          <input name="vis_cor" type="color" value="#e53935" />
+        </div>
+      </div>
+      <div>
+        <label>Local (opcional)</label>
+        <input name="local" placeholder="Ginásio Central" />
+      </div>
+      <button type="submit">Criar partida</button>
+    </form>
+    <h2 style="margin-top:36px">Partidas cadastradas</h2>
+    <div id="lista" class="grid"></div>
+  </main>
+  <script type="module">
+    import { api } from "/static/assets/api.js";
+    const form  = document.getElementById("form");
+    const erro  = document.getElementById("erro");
+    const lista = document.getElementById("lista");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      erro.innerHTML = "";
+      const f = new FormData(form);
+      const payload = {
+        modalidade: f.get("modalidade"),
+        local: f.get("local") || null,
+        time_casa:       { nome: f.get("casa_nome"), cor: f.get("casa_cor") },
+        time_visitante:  { nome: f.get("vis_nome"),  cor: f.get("vis_cor")  },
+      };
+      try {
+        const partida = await api.criarPartida(payload);
+        location.href = `/controlador/${partida.id}`;
+      } catch (err) {
+        erro.innerHTML = `<div class="alert">${err.message}</div>`;
+      }
+    });
+    async function carregar() {
+      try {
+        const partidas = await api.listarPartidas();
+        if (!partidas.length) { lista.innerHTML = `<div class="empty">Nenhuma partida ainda.</div>`; return; }
+        lista.innerHTML = partidas.map(p => `
+          <div class="card">
+            <div class="modalidade">${p.modalidade}</div>
+            <div class="placar">
+              <span class="time" style="color:${p.casa.time.cor}">${p.casa.time.nome}</span>
+              <span class="pts">${p.casa.pontos} : ${p.visitante.pontos}</span>
+              <span class="time" style="color:${p.visitante.time.cor}">${p.visitante.time.nome}</span>
+            </div>
+            <span class="status ${p.status}">${p.status.replace("_"," ")}</span>
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+              <a href="/partida/${p.id}"><button class="secondary" type="button">Placar ao vivo</button></a>
+              <a href="/controlador/${p.id}"><button type="button">Controlar</button></a>
+              <button class="danger" data-del="${p.id}" type="button">Excluir</button>
+            </div>
+          </div>
+        `).join("");
+        lista.querySelectorAll("[data-del]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            if (!confirm("Excluir esta partida?")) return;
+            try { await api.deletarPartida(btn.dataset.del); carregar(); }
+            catch (e) { erro.innerHTML = `<div class="alert">${e.message}</div>`; }
+          });
+        });
+      } catch (e) {
+        erro.innerHTML = `<div class="alert">${e.message}</div>`;
+      }
+    }
+    carregar();
+    setInterval(carregar, 5000);
+  </script>
+</body>
+</html>

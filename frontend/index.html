@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Placar Eletrônico IoT — Partidas em Curso</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/assets/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏆 Placar Eletrônico IoT</h1>
+    <nav>
+      <a href="/">Partidas</a>
+      <a href="/admin">Gerenciar</a>
+    </nav>
+  </header>
+  <main>
+    <h2>Partidas em curso</h2>
+    <p style="color:var(--muted)">Clique em uma partida para acompanhar o placar ao vivo.</p>
+    <div id="erro"></div>
+    <div id="grid" class="grid"></div>
+  </main>
+  <script type="module">
+    import { api } from "/static/assets/api.js";
+    const grid = document.getElementById("grid");
+    const erro = document.getElementById("erro");
+    function render(partidas) {
+      if (!partidas.length) {
+        grid.innerHTML = `<div class="empty">Nenhuma partida cadastrada ainda. <a href="/admin">Criar a primeira →</a></div>`;
+        return;
+      }
+      grid.innerHTML = partidas.map(p => `
+        <a class="card" href="/partida/${p.id}">
+          <div class="modalidade">${p.modalidade}</div>
+          <div class="placar">
+            <span class="time" style="color:${p.casa.time.cor}">${p.casa.time.nome}</span>
+            <span class="pts">${p.casa.pontos} : ${p.visitante.pontos}</span>
+            <span class="time" style="color:${p.visitante.time.cor}">${p.visitante.time.nome}</span>
+          </div>
+          <span class="status ${p.status}">${p.status.replace("_"," ")}</span>
+        </a>
+      `).join("");
+    }
+    async function carregar() {
+      try { render(await api.listarPartidas()); }
+      catch (e) { erro.innerHTML = `<div class="alert">${e.message}</div>`; }
+    }
+    carregar();
+    // Polling do dashboard a cada 3s.
+    setInterval(carregar, 3000);
+  </script>
+</body>
+</html>

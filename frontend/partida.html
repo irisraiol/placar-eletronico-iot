@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Placar ao Vivo — Placar IoT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/assets/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏆 Placar Eletrônico IoT</h1>
+    <nav>
+      <a href="/">Partidas</a>
+      <a href="/admin">Gerenciar</a>
+    </nav>
+  </header>
+  <main>
+    <div id="erro"></div>
+    <div id="view"></div>
+  </main>
+  <script type="module">
+    import { api, formatarTempo } from "/static/assets/api.js";
+    const id   = location.pathname.split("/").pop();
+    const view = document.getElementById("view");
+    const erro = document.getElementById("erro");
+    function render(p) {
+      view.innerHTML = `
+        <p style="color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">
+          ${p.modalidade} · ${p.status.replace("_"," ")} ${p.local ? "· " + p.local : ""}
+        </p>
+        <div class="scoreboard">
+          <div class="team" style="background:${p.casa.time.cor}">
+            <div class="nome">${p.casa.time.nome}</div>
+            <div class="pts">${p.casa.pontos}</div>
+            <div class="faltas">Faltas: ${p.casa.faltas}</div>
+          </div>
+          <div class="middle">
+            <div class="crono">${formatarTempo(p.cronometro_atual)}</div>
+            <div class="periodo">Período ${p.periodo}</div>
+          </div>
+          <div class="team" style="background:${p.visitante.time.cor}">
+            <div class="nome">${p.visitante.time.nome}</div>
+            <div class="pts">${p.visitante.pontos}</div>
+            <div class="faltas">Faltas: ${p.visitante.faltas}</div>
+          </div>
+        </div>
+        <p style="margin-top:20px">
+          <a href="/controlador/${p.id}"><button>Abrir painel do mesário →</button></a>
+        </p>
+      `;
+    }
+    async function tick() {
+      try { render(await api.obterPartida(id)); erro.innerHTML = ""; }
+      catch (e) { erro.innerHTML = `<div class="alert">${e.message}</div>`; }
+    }
+    tick();
+    // Polling agressivo para refletir mudanças quase em tempo real.
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
