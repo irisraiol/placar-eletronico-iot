@@ -5,7 +5,7 @@ Projeto acadêmico — **Equipe 1**
 * **Curso:** Análise e Desenvolvimento de Sistemas (ADS) - 2º Período
 * **Disciplina:** Desenvolvimento de Serviços e APIs
 * **Professor:** Carlos Bruno Oliveira Lopes
-* **Alunos:** Iris Raiol, Rubem Mateus, Matheus Sasaki, Carlos Eduardo.
+* **Alunos:** Iris Raiol, Rubem Mateus, Matheus Sasaki, Carlos Eduardo, Herbert Franklin, Fabio Martins, Carlos Henrique.
 
 Sistema distribuído **Cliente-Servidor** que gerencia e transmite placares de campeonatos em tempo real, com suporte a múltiplas modalidades (Futebol, Basquete, Vôlei e Handebol).
 
